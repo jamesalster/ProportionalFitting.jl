@@ -50,15 +50,16 @@ julia> Array(AF)
  7  14  21
 ```
 """
-struct ArrayFactors{T}
-    af::Vector{<:AbstractArray{T}}
+struct ArrayFactors{T, D}
+    af::Vector{Array{T}}
     di::DimIndices
-    size::Tuple
+    size::NTuple{D, Int}
 
     function ArrayFactors(af::Vector{<:AbstractArray{T}}, di::DimIndices) where {T}
         # loop over arrays then dimensions to get size, checking for mismatches
-        dimension_sizes = zeros(Int, ndims(di))
-        for i in 1:length(af)
+        D = ndims(di)
+        dimension_sizes = zeros(Int, D)
+        for i in eachindex(af)
             for (j, d) in enumerate(di.idx[i])
                 new_size = size(af[i], j)
                 if dimension_sizes[d] == 0
@@ -75,7 +76,7 @@ struct ArrayFactors{T}
                 end
             end
         end
-        return new{T}(af, di, Tuple(dimension_sizes))
+        return new{T, D}(af, di, NTuple{D, Int}(dimension_sizes))
     end
 end
 
@@ -105,8 +106,9 @@ function Base.show(io::IO, AF::ArrayFactors)
     end
 end
 
-Base.size(AF::ArrayFactors) = AF.size
 Base.length(AF::ArrayFactors) = length(AF.af)
+Base.ndims(AF::ArrayFactors) = length(AF.size)
+Base.size(AF::ArrayFactors) = AF.size
 
 # method to align all arrays so each has dimindices 1:ndims(AM)
 function align_margins(AF::ArrayFactors{T})::Vector{Array{T}} where T
@@ -142,7 +144,7 @@ julia> Array(fac)
  84  105
 ```
 """
-function Base.Array(AF::ArrayFactors{T}) where {T}
+function Base.Array(AF::ArrayFactors{T})  where T
     D = length(AF.di)
     M = ones(T, size(AF))
     aligned_factors = align_margins(AF)
