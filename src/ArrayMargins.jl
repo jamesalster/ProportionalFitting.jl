@@ -135,7 +135,7 @@ function Base.convert(T::DataType, AM::ArrayMargins)::ArrayMargins{T}
 end
 
 # method to align all arrays so each has dimindices 1:ndims(AM)
-function align_margins(AM::ArrayMargins{T})::Vector{Array{T}} where T
+function align_margins(AM::ArrayMargins{T, D})::Vector{Array{T, D}} where {T, D}
     align_margins(AM.am, AM.di, AM.size)
 end
 
