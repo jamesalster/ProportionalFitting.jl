@@ -48,16 +48,17 @@ Margins of 3D array:
   [3, 1]: [9 12; 27 30]
 ```
 """
-struct ArrayMargins{T}
-    am::Vector{<:AbstractArray{T}}
+struct ArrayMargins{T, D}
+    am::Vector{Array{T}}
     di::DimIndices
-    size::Tuple
+    size::NTuple{D, Int}
 
     # loop to check dimension sizes
     function ArrayMargins(am::Vector{<:AbstractArray{T}}, di::DimIndices) where {T}
         # loop over arrays then dimensions to get size, checking for mismatches
-        dimension_sizes = zeros(Int, ndims(di))
-        for i in 1:length(am)
+        D = ndims(di)
+        dimension_sizes = zeros(Int, D)
+        for i in eachindex(am)
             for (j, d) in enumerate(di.idx[i])
                 new_size = size(am[i], j)
                 if dimension_sizes[d] == 0
@@ -74,7 +75,7 @@ struct ArrayMargins{T}
                 end
             end
         end
-        return new{T}(am, di, Tuple(dimension_sizes))
+        return new{T, D}(am, di, NTuple{D, Int}(dimension_sizes))
     end
 end
 
@@ -96,15 +97,15 @@ function ArrayMargins(X::AbstractArray, di::DimIndices)
     D = ndims(X)
     if D != ndims(di)
         throw(
-            DimensionMismatch("Dimensions of X ($(ndims(X))) mismatch DI ($(ndims(di))).")
+            DimensionMismatch("Dimensions of X $D mismatch DI ($(ndims(di))).")
         )
     end
 
     # create the margins
     am = Vector{AbstractArray{eltype(X)}}()
     for dim in di.idx
-        notd = Tuple(setdiff(1:D, dim))
-        mar = dropdims(sum(X; dims=notd); dims=notd)
+        notd = setdiff(1:D, dim)
+        mar = dropdims(sum(X; dims=notd); dims=ntuple(x -> notd[x], length(notd))) # for compiler inference
         if !issorted(dim)
             mar = permutedims(mar, sortperm(sortperm(dim)))
         end
@@ -124,9 +125,9 @@ function Base.show(io::IO, AM::ArrayMargins)
     end
 end
 
-Base.size(AM::ArrayMargins) = AM.size
 Base.length(AM::ArrayMargins) = length(AM.am)
 Base.ndims(AM::ArrayMargins) = length(AM.size)
+Base.size(AM::ArrayMargins) = AM.size
 
 function Base.convert(T::DataType, AM::ArrayMargins)::ArrayMargins{T}
     new_margins = [convert.(T, arr) for arr in AM.am]

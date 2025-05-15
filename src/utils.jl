@@ -1,6 +1,6 @@
 
 # method to align margins according to the size of a larger array
-function align_margins(arr::AbstractArray, idx::Vector{Int}, shape::Tuple)
+function align_margins(arr::AbstractArray, idx::Vector{Int}, shape)
     # sort dimensions if necessary
     sp = sortperm(idx)
     permuted_arr = PermutedDimsArray(arr, sp) # use a view unlike permutedims()
@@ -10,7 +10,7 @@ function align_margins(arr::AbstractArray, idx::Vector{Int}, shape::Tuple)
 end
 
 # method to align all arrays so each has dimindices 1:length(shape)
-function align_margins(A::Vector{<:AbstractArray}, DI::DimIndices, shape::Tuple)
+function align_margins(A::Vector{<:AbstractArray}, DI::DimIndices, shape)
     map(A, DI.idx) do arr, idx
         align_margins(arr, idx, shape)
     end
