@@ -111,7 +111,7 @@ Base.ndims(AF::ArrayFactors) = length(AF.size)
 Base.size(AF::ArrayFactors) = AF.size
 
 # method to align all arrays so each has dimindices 1:ndims(AM)
-function align_margins(AF::ArrayFactors{T})::Vector{Array{T}} where T
+function align_margins(AF::ArrayFactors{T, D})::Vector{Array{T, D}} where {T, D}
     align_margins(AF.af, AF.di, AF.size)
 end
 
@@ -144,12 +144,10 @@ julia> Array(fac)
  84  105
 ```
 """
-function Base.Array(AF::ArrayFactors{T})  where T
-    D = length(AF.di)
+function Base.Array(AF::ArrayFactors{T}) where T
     M = ones(T, size(AF))
-    aligned_factors = align_margins(AF)
-    for d in 1:D
-        M .*= aligned_factors[d]
+    for af in align_margins(AF)
+        M .*= af
     end
     return M
 end
