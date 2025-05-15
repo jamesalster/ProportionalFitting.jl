@@ -48,7 +48,7 @@ Margins of 3D array:
   [3, 1]: [9 12; 27 30]
 ```
 """
-struct ArrayMargins{T, D}
+struct ArrayMargins{T<:Number, D}
     am::Vector{Array{T}}
     di::DimIndices
     size::NTuple{D, Int}
@@ -145,12 +145,12 @@ function isconsistent(AM::ArrayMargins; tol = 1e-10)
     return (maximum(marsums) - minimum(marsums)) < tol
 end
 
-function proportion_transform(AM::ArrayMargins)
+function proportion_transform(AM::ArrayMargins{T, D})::ArrayMargins{Float64, D} where {T, D}
     mar = AM.am ./ sum.(AM.am)
     return ArrayMargins(mar, AM.di)
 end
 
-function margin_totals_match(AM::ArrayMargins; tol = 1e-10)
+function margin_totals_match(AM::ArrayMargins; tol=1e-10)::Bool
 
     # get all shared subsets of dimensions
     shared_subsets = unique(vcat(
@@ -179,4 +179,9 @@ function margin_totals_match(AM::ArrayMargins; tol = 1e-10)
     end
 
     return check
+end
+
+function Base.convert(T::Type, AM::ArrayMargins{O, D})::ArrayMargins{T, D} where {O, D}
+    converted_margins = convert.(Array{T}, AM.am)
+    return ArrayMargins(converted_margins, AM.di)
 end
