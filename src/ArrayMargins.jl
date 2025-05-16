@@ -50,13 +50,12 @@ Margins of 3D array:
 """
 struct ArrayMargins{T<:Number, D}
     am::Vector{Array{T}}
-    di::DimIndices
+    di::DimIndices{D}
     size::NTuple{D, Int}
 
     # loop to check dimension sizes
-    function ArrayMargins(am::Vector{<:AbstractArray{T}}, di::DimIndices) where {T}
+    function ArrayMargins(am::Vector{<:AbstractArray{T}}, di::DimIndices{D}) where {T, D}
         # loop over arrays then dimensions to get size, checking for mismatches
-        D = ndims(di)
         dimension_sizes = zeros(Int, D)
         for i in eachindex(am)
             for (j, d) in enumerate(di.idx[i])
