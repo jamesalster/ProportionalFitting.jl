@@ -18,7 +18,7 @@ Indices for 4D array:
 [[2], [1, 3], [4]]
 ```
 """
-struct DimIndices
+struct DimIndices{D}
     idx::Vector{Vector{Int}}
     # inner constructor checking uniqueness & completeness
     function DimIndices(idx::Vector{Vector{Int}})
@@ -35,7 +35,7 @@ struct DimIndices
         if length(dmissing) > 0
             error("Missing array dimensions: $dmissing.")
         end
-        return new(idx)
+        return new{D}(idx)
     end
 end
 

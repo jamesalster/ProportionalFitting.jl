@@ -52,12 +52,11 @@ julia> Array(AF)
 """
 struct ArrayFactors{T, D}
     af::Vector{Array{T}}
-    di::DimIndices
+    di::DimIndices{D}
     size::NTuple{D, Int}
 
-    function ArrayFactors(af::Vector{<:AbstractArray{T}}, di::DimIndices) where {T}
+    function ArrayFactors(af::Vector{<:AbstractArray{T}}, di::DimIndices{D}) where {T, D}
         # loop over arrays then dimensions to get size, checking for mismatches
-        D = ndims(di)
         dimension_sizes = zeros(Int, D)
         for i in eachindex(af)
             for (j, d) in enumerate(di.idx[i])
