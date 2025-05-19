@@ -128,23 +128,23 @@ Base.length(AM::ArrayMargins) = length(AM.am)
 Base.ndims(AM::ArrayMargins) = length(AM.size)
 Base.size(AM::ArrayMargins) = AM.size
 
-function Base.convert(T::DataType, AM::ArrayMargins)::ArrayMargins{T}
-    new_margins = [convert.(T, arr) for arr in AM.am]
-    return ArrayMargins(new_margins, AM.di)
+function Base.convert(T::Type, AM::ArrayMargins{O, D})::ArrayMargins{T, D} where {O, D}
+    converted_margins = convert.(Array{T}, AM.am)
+    return ArrayMargins(converted_margins, AM.di)
 end
 
 # method to align all arrays so each has dimindices 1:ndims(AM)
-function align_margins(AM::ArrayMargins{T, D})::Vector{Array{T, D}} where {T, D}
+function align_margins(AM::ArrayMargins{T, D}) where {T, D}
     align_margins(AM.am, AM.di, AM.size)
 end
 
 # methods for consistency of margins
 function isconsistent(AM::ArrayMargins; tol = 1e-10)
     marsums = sum.(AM.am)
-    return (maximum(marsums) - minimum(marsums)) < tol
+    return all(x -> isapprox(x, marsums[1]; atol = tol), marsums)
 end
 
-function proportion_transform(AM::ArrayMargins{T, D})::ArrayMargins{Float64, D} where {T, D}
+function proportion_transform(AM::ArrayMargins{T, D})::ArrayMargins{T, D} where {T, D}
     mar = AM.am ./ sum.(AM.am)
     return ArrayMargins(mar, AM.di)
 end
@@ -178,9 +178,4 @@ function margin_totals_match(AM::ArrayMargins; tol=1e-10)::Bool
     end
 
     return check
-end
-
-function Base.convert(T::Type, AM::ArrayMargins{O, D})::ArrayMargins{T, D} where {O, D}
-    converted_margins = convert.(Array{T}, AM.am)
-    return ArrayMargins(converted_margins, AM.di)
 end

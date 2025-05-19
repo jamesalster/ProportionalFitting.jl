@@ -110,7 +110,7 @@ Base.ndims(AF::ArrayFactors) = length(AF.size)
 Base.size(AF::ArrayFactors) = AF.size
 
 # method to align all arrays so each has dimindices 1:ndims(AM)
-function align_margins(AF::ArrayFactors{T, D})::Vector{Array{T, D}} where {T, D}
+function align_margins(AF::ArrayFactors{T, D}) where {T, D}
     align_margins(AF.af, AF.di, AF.size)
 end
 
