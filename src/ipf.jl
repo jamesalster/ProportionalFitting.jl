@@ -94,77 +94,32 @@ function ipf(
 
     # initialization 
 
-    # define dimensions
-    J = length(mar_p)
-    di = mar_p.di
-    complement_dims = Tuple.(setdiff(1:ndims(mar_p), dd) for dd in di.idx)
+    # get complement dimensions
+    complement_dims = [setdiff(1:ndims(mar_p), dd) for dd in mar_p.di.idx]
 
     # pre-align array margins
     aligned_margins = align_margins(mar_p)
 
     # initialize seed as aligned array margins
-    aligned_seed = align_margins(ArrayMargins(X_p, di))
+    aligned_seed = align_margins(ArrayMargins(X_p, mar_p.di))
 
     # initialize factors to update
-    fac = [aligned_margins[i] ./ aligned_seed[i] for i in 1:J]
+    fac = [aligned_margins[i] ./ aligned_seed[i] for i in eachindex(aligned_margins)]
 
-    # copy the starting array
-    X_prod = copy(X_p)
-
-    # start iteration
-
-    iter = 0
-    crit = 0.0
-    for i in 1:maxiter
-        iter += 1
-        oldfac = deepcopy(fac)
-
-        for j in 1:J # loop over margin elements
-            notj = setdiff(1:J, j) # get complement margins
-
-            # create X multiplied by complement factors
-            for k in 1:J-1 # loop over complement margins
-                cur_fac = fac[notj[k]] # get current factor
-                # perform elementwise multiplication
-                if k == 1
-                    X_prod .= X_p .* cur_fac
-                else
-                    X_prod .*= cur_fac
-                end
-            end
-
-            # then we compute the margin by summing over all complement dimensions
-            cur_sum = sum(X_prod; dims=complement_dims[j])
-
-            # update this factor
-            fac[j] = aligned_margins[j] ./ cur_sum
-        end
-
-        # convergence check
-        crit = maximum(broadcast(x -> maximum(abs.(x)), fac - oldfac))
-        if crit < tol_p
-            break
-        end
-    end
-
-    if iter == maxiter
-        @warn "Did not converge. Try increasing the number of iterations. Maximum absolute difference between subsequent iterations: $crit"
-    else
-        @info "Converged in $iter iterations."
-    end
+    output_fac = _ipf(X_p, aligned_margins, fac, complement_dims; maxiter=maxiter, tol=tol)
 
     # return factors to original margin shape
-    reshaped_factors = map(1:J) do j
-        reshaped_fac = dropdims(fac[j]; dims=complement_dims[j])
-        if !issorted(di[j])
-            sp = sortperm(sortperm(di[j]))
+    reshaped_factors = map(eachindex(output_fac)) do j
+        reshaped_fac = dropdims(output_fac[j]; dims=Tuple(complement_dims[j]))
+        if !issorted(mar_p.di[j])
+            sp = sortperm(sortperm(mar_p.di[j]))
             permutedims(reshaped_fac, sp)
         else
             reshaped_fac
         end
     end
 
-    return ArrayFactors(reshaped_factors, di)
+    return ArrayFactors(reshaped_factors, mar_p.di)
 end
 
 function ipf(
@@ -182,4 +137,63 @@ end
 
 function ipf(mar::Vector{<:Vector{<:Real}}; maxiter::Int=1000, tol=1e-10)
     return ipf(ArrayMargins(mar); maxiter=maxiter, tol=tol)
+end
+
+function _ipf(
+        X::Array{T, D},
+        margins::Vector,
+        fac::Vector{Array{T, D}},
+        complement_dims::Vector{Vector{Int}};
+        maxiter::Int=1000,
+        tol::T=eps(T)
+    )::Vector{Array{T}} where {T,D}
+
+    # define dimensions
+    J = length(fac)
+    # copy the starting array
+    X_prod = copy(X)
+
+    # start iteration
+
+    iter = 0
+    crit = 0.0
+    for i in 1:maxiter
+        iter += 1
+        oldfac = deepcopy(fac)
+
+        for j in 1:J # loop over margin elements
+            notj = setdiff(1:J, j) # get complement margins
+
+            # create X multiplied by complement factors
+            for k in 1:J-1 # loop over complement margins
+                cur_fac = fac[notj[k]] # get current factor
+                # perform elementwise multiplication
+                if k == 1
+                    X_prod .= X .* cur_fac
+                else
+                    X_prod .*= cur_fac
+                end
+            end
+
+            # then we compute the margin by summing over all complement dimensions
+            cur_sum = sum(X_prod; dims=complement_dims[j])
+
+            # update this factor
+            fac[j] = margins[j] ./ cur_sum
+        end
+
+        # convergence check
+        crit = maximum(broadcast(x -> maximum(abs.(x)), fac - oldfac))
+        if crit < tol
+            break
+        end
+    end
+
+    if iter == maxiter
+        @warn "Did not converge. Try increasing the number of iterations. Maximum absolute difference between subsequent iterations: $crit"
+    else
+        @info "Converged in $iter iterations."
+    end
+
+    return fac
 end
